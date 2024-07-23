@@ -14,11 +14,15 @@ def calculate_engagement_rate(username: str) -> dict:
         # Variables to hold total likes and comments for calculating averages
         total_likes = 0
         total_comments = 0
+        post_count = 0
 
-        # Iterate over posts
+        # Iterate over the latest 18 posts
         for post in profile.get_posts():
+            if post_count >= 18:
+                break
             total_likes += post.likes
             total_comments += post.comments
+            post_count += 1
 
         # Calculate average likes and comments
         average_likes = total_likes / profile.mediacount if profile.mediacount > 0 else 0
