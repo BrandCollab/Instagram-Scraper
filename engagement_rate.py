@@ -27,7 +27,11 @@ def calculate_engagement_rate(username: str) -> dict:
         # Calculate engagement rate
         engagement_rate = round(((average_likes + average_comments) / profile.followers) * 100 if profile.followers > 0 else 0,2)
 
-        return engagement_rate
+        return {
+            "average_likes": round(average_likes,2),
+            "average_comments":round(average_comments,2),
+            "engagement_rate": engagement_rate
+        }
     
     except instaloader.exceptions.ProfileNotExistsException:
         raise HTTPException(status_code=404, detail="Profile not found")
