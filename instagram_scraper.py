@@ -16,6 +16,7 @@ def scrape_instagram_profile(username: str) -> dict:
             "username": profile.username,
             "full_name": profile.full_name,
             "biography": profile.biography,
+            "profile_pic" : profile.profile_pic_url,
             "is_verified": profile.is_verified,
             "business_category_name": profile.business_category_name,
             "followers": profile.followers,
