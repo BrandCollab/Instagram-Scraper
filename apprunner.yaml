@@ -1,9 +1,13 @@
 version: 1.0 # version of the specification
-runtime: python3 # runtime to use
+runtime: python3.9 # runtime to use
 build:
   commands:
     build:
-      - pip install -r requirements.txt # install dependencies
+      # Upgrade pip to ensure the latest version is used
+      - python3 -m ensurepip
+      - python3 -m pip install --upgrade pip
+      # Install dependencies from requirements.txt
+      - python3 -m pip install -r requirements.txt
 
 run:
   command: python instagram_profile_scraper.py # command to run fastapi
