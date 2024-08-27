@@ -5,10 +5,6 @@ build:
     build:
       - pip install -r requirements.txt # install dependencies
 
-  env: # define environment variables
-    - name: PORT
-      value: '8000'
-
 run:
   command: python instgram_profile_scraper.py # command to run fastapi
   network:
