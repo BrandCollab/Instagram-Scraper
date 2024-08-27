@@ -6,6 +6,6 @@ build:
       - pip install -r requirements.txt # install dependencies
 
 run:
-  command: python instgram_profile_scraper.py # command to run fastapi
+  command: python instagram_profile_scraper.py # command to run fastapi
   network:
     port: 8000 # port AppRunner will expose
