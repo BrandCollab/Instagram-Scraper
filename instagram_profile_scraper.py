@@ -1,5 +1,7 @@
 import instaloader
 from fastapi import FastAPI, HTTPException
+import time
+import random
 
 app = FastAPI()
 
@@ -7,6 +9,9 @@ def scrape_instagram_profile(username: str) -> dict:
     try:
         # Initialize instaloader
         loader = instaloader.Instaloader()
+
+        # Introduce random delay to avoid rate limiting
+        time.sleep(random.uniform(2, 5))
 
         # Load the profile
         profile = instaloader.Profile.from_username(loader.context, username)
@@ -29,8 +34,9 @@ def scrape_instagram_profile(username: str) -> dict:
         # Store all posts to find the top posts by likes later
         all_posts = []
 
-        # Iterate over posts
+        # Iterate over posts with a random delay
         for idx, post in enumerate(profile.get_posts(), start=1):
+            time.sleep(random.uniform(1, 3))  # random delay between requests
             post_data = {
                 "post_url": f"https://www.instagram.com/p/{post.shortcode}/",
                 "caption": post.caption,
@@ -64,6 +70,8 @@ def scrape_instagram_profile(username: str) -> dict:
         return profile_data
     except instaloader.exceptions.ProfileNotExistsException:
         raise HTTPException(status_code=404, detail="Profile not found")
+    except instaloader.exceptions.ConnectionException as ce:
+        raise HTTPException(status_code=503, detail="Instagram is blocking requests temporarily. Please try again later.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
