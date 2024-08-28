@@ -1,3 +1,4 @@
 fastapi
 uvicorn
 instaloader
+urllib3<2
