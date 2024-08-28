@@ -5,9 +5,7 @@ build:
   commands:
     # Ensure pip is up to date and install dependencies
     build:
-      - python3 -m ensurepip
-      - python3 -m pip install --upgrade pip
-      - python3 -m pip install -r requirements.txt
+      - pip install -m requirements.txt
 
 run:
   # Command to start the FastAPI application using Uvicorn
