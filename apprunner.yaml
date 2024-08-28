@@ -1,15 +1,18 @@
 version: 1.0 # version of the specification
 runtime: python3.9 # runtime to use
+
 build:
   commands:
+    # Ensure pip is up to date and install dependencies
     build:
-      # Upgrade pip to ensure the latest version is used
       - python3 -m ensurepip
       - python3 -m pip install --upgrade pip
-      # Install dependencies from requirements.txt
       - python3 -m pip install -r requirements.txt
 
 run:
-  command: python instagram_profile_scraper.py # command to run fastapi
+  # Command to start the FastAPI application using Uvicorn
+  command: uvicorn instagram_profile_scraper:app --host 0.0.0.0 --port 8000
+
+  # Specify the network port that AWS App Runner will expose
   network:
-    port: 8000 # port AppRunner will expose
+    port: 8000
