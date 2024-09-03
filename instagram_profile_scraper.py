@@ -6,23 +6,15 @@ import logging
 
 app = FastAPI()
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 
-def scrape_instagram_profile(username: str) -> dict:
+def scrape_instagram_profile(username: str, retry_count: int = 3) -> dict:
     try:
         logging.info(f"Starting to scrape profile: {username}")
-
-        # Initialize instaloader
         loader = instaloader.Instaloader()
-
-        # Introduce random delay to avoid rate limiting
         time.sleep(random.uniform(1, 3))
-
-        # Load the profile
         profile = instaloader.Profile.from_username(loader.context, username)
 
-        # Create a dictionary to hold profile information
         profile_data = {
             "username": profile.username,
             "full_name": profile.full_name,
@@ -37,16 +29,11 @@ def scrape_instagram_profile(username: str) -> dict:
             "posts": {},
         }
 
-        logging.info(f"Profile data retrieved for: {username}")
-
-        # Store all posts to find the top posts by likes later
         all_posts = []
-
-        # Iterate over posts with a random delay, limiting to 9 posts for quicker execution
         for idx, post in enumerate(profile.get_posts(), start=1):
-            if idx > 5:  # Limit to 9 posts
+            if idx > 9:
                 break
-            time.sleep(random.uniform(0.5, 1.5))  # Reduced random delay between requests
+            time.sleep(random.uniform(0.5, 1.5))
 
             post_data = {
                 "post_url": f"https://www.instagram.com/p/{post.shortcode}/",
@@ -71,10 +58,7 @@ def scrape_instagram_profile(username: str) -> dict:
             profile_data["posts"][idx] = post_data
             all_posts.append(post_data)
 
-        # Sort all posts by the number of likes in descending order
         all_posts.sort(key=lambda x: x['likes'], reverse=True)
-
-        # Get the top 3 posts with highest likes
         for idx, post in enumerate(all_posts[:3], start=1):
             profile_data["top_posts"][idx] = post
 
@@ -85,8 +69,17 @@ def scrape_instagram_profile(username: str) -> dict:
     except instaloader.exceptions.ProfileNotExistsException:
         raise HTTPException(status_code=404, detail="Profile not found")
     except instaloader.exceptions.ConnectionException as ce:
+        if retry_count > 0:
+            logging.warning(f"Connection issue for {username}, retrying... ({3 - retry_count + 1}/3)")
+            time.sleep(2 ** (4 - retry_count))  # Exponential backoff
+            return scrape_instagram_profile(username, retry_count - 1)
         raise HTTPException(status_code=503, detail="Instagram is blocking requests temporarily. Please try again later.")
     except Exception as e:
+        if "401 Unauthorized" in str(e) or "Please wait a few minutes before you try again." in str(e):
+            logging.error("Rate limit hit, retrying with backoff...")
+            time.sleep(random.uniform(30, 60))  # Longer delay before retry
+            if retry_count > 0:
+                return scrape_instagram_profile(username, retry_count - 1)
         logging.error(f"Error scraping profile {username}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
