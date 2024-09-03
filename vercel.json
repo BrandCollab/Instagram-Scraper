@@ -1,0 +1,14 @@
+{
+    "builds": [
+        {
+            "src": "instagram_profile_scraper.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/scrape/{username}",
+            "dest": "instagram_profile_scraper.py"
+        }
+    ]
+}
