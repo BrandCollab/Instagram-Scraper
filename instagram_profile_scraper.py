@@ -2,16 +2,22 @@ import instaloader
 from fastapi import FastAPI, HTTPException
 import time
 import random
+import logging
 
 app = FastAPI()
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+
 def scrape_instagram_profile(username: str) -> dict:
     try:
+        logging.info(f"Starting to scrape profile: {username}")
+
         # Initialize instaloader
         loader = instaloader.Instaloader()
 
         # Introduce random delay to avoid rate limiting
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(1, 3))
 
         # Load the profile
         profile = instaloader.Profile.from_username(loader.context, username)
@@ -31,14 +37,17 @@ def scrape_instagram_profile(username: str) -> dict:
             "posts": {},
         }
 
+        logging.info(f"Profile data retrieved for: {username}")
+
         # Store all posts to find the top posts by likes later
         all_posts = []
 
-        # Iterate over posts with a random delay, limiting to 18 posts
+        # Iterate over posts with a random delay, limiting to 9 posts for quicker execution
         for idx, post in enumerate(profile.get_posts(), start=1):
-            if idx > 18:  # Limit to 18 posts
+            if idx > 5:  # Limit to 9 posts
                 break
-            time.sleep(random.uniform(1, 3))  # random delay between requests
+            time.sleep(random.uniform(0.5, 1.5))  # Reduced random delay between requests
+
             post_data = {
                 "post_url": f"https://www.instagram.com/p/{post.shortcode}/",
                 "caption": post.caption,
@@ -69,12 +78,16 @@ def scrape_instagram_profile(username: str) -> dict:
         for idx, post in enumerate(all_posts[:3], start=1):
             profile_data["top_posts"][idx] = post
 
+        logging.info(f"Finished scraping profile: {username}")
+
         return profile_data
+
     except instaloader.exceptions.ProfileNotExistsException:
         raise HTTPException(status_code=404, detail="Profile not found")
     except instaloader.exceptions.ConnectionException as ce:
         raise HTTPException(status_code=503, detail="Instagram is blocking requests temporarily. Please try again later.")
     except Exception as e:
+        logging.error(f"Error scraping profile {username}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/scrape/{username}")
