@@ -77,7 +77,7 @@ def scrape_instagram_profile(username: str, retry_count: int = 3) -> dict:
     except Exception as e:
         if "401 Unauthorized" in str(e) or "Please wait a few minutes before you try again." in str(e):
             logging.error("Rate limit hit, retrying with backoff...")
-            time.sleep(random.uniform(30, 60))  # Longer delay before retry
+            time.sleep(random.uniform(60, 120))  # Longer delay before retry
             if retry_count > 0:
                 return scrape_instagram_profile(username, retry_count - 1)
         logging.error(f"Error scraping profile {username}: {str(e)}")
