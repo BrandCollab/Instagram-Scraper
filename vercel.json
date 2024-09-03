@@ -7,7 +7,7 @@
     ],
     "routes": [
         {
-            "src": "/scrape/{username}",
+            "src": "/scrape/(.*)",
             "dest": "instagram_profile_scraper.py"
         }
     ]
