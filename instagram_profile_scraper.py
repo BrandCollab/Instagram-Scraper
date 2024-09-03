@@ -21,7 +21,7 @@ def scrape_instagram_profile(username: str) -> dict:
             "username": profile.username,
             "full_name": profile.full_name,
             "biography": profile.biography,
-            "profile_pic" : profile.profile_pic_url,
+            "profile_pic": profile.profile_pic_url,
             "is_verified": profile.is_verified,
             "business_category_name": profile.business_category_name,
             "followers": profile.followers,
@@ -34,8 +34,10 @@ def scrape_instagram_profile(username: str) -> dict:
         # Store all posts to find the top posts by likes later
         all_posts = []
 
-        # Iterate over posts with a random delay
+        # Iterate over posts with a random delay, limiting to 18 posts
         for idx, post in enumerate(profile.get_posts(), start=1):
+            if idx > 18:  # Limit to 18 posts
+                break
             time.sleep(random.uniform(1, 3))  # random delay between requests
             post_data = {
                 "post_url": f"https://www.instagram.com/p/{post.shortcode}/",
