@@ -1,9 +1,16 @@
 import instaloader
-from fastapi import FastAPI, HTTPException
 import time
 import random
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+from instagram_engagement_rate import calculate_engagement_rate
 
-app = FastAPI()
+# Load environment variables from .env file
+load_dotenv()
+
+# Get MongoDB connection details from environment variables
+mongodb_uri = os.getenv("MONGODB_URI")
 
 def scrape_instagram_profile(username: str) -> dict:
     try:
@@ -16,17 +23,25 @@ def scrape_instagram_profile(username: str) -> dict:
         # Load the profile
         profile = instaloader.Profile.from_username(loader.context, username)
 
+        # Get engagement rate
+        engagement_data = calculate_engagement_rate(username)
+        if engagement_data is None:
+            return None
+
         # Create a dictionary to hold profile information
         profile_data = {
             "username": profile.username,
             "full_name": profile.full_name,
             "biography": profile.biography,
-            "profile_pic" : profile.profile_pic_url,
+            "profile_pic": profile.profile_pic_url,
             "is_verified": profile.is_verified,
-            "business_category_name": profile.business_category_name,
+            # "business_category_name": profile.business_category_name,
             "followers": profile.followers,
             "following": profile.followees,
             "number_of_posts": profile.mediacount,
+            "average_likes": engagement_data['average_likes'],
+            "average_comments": engagement_data['average_comments'],
+            "engagement_rate": f"{engagement_data['engagement_rate']} %",
             "top_posts": {},
             "posts": {},
         }
@@ -34,8 +49,10 @@ def scrape_instagram_profile(username: str) -> dict:
         # Store all posts to find the top posts by likes later
         all_posts = []
 
-        # Iterate over posts with a random delay
+        # Iterate over posts with a random delay, limit to 18 posts
         for idx, post in enumerate(profile.get_posts(), start=1):
+            if idx > 18:  # Limit to 18 posts
+                break
             time.sleep(random.uniform(1, 3))  # random delay between requests
             post_data = {
                 "post_url": f"https://www.instagram.com/p/{post.shortcode}/",
@@ -57,7 +74,8 @@ def scrape_instagram_profile(username: str) -> dict:
                 for sidecar_node in post.get_sidecar_nodes():
                     post_data["media_urls"].append(sidecar_node.display_url)
 
-            profile_data["posts"][idx] = post_data
+            # Convert integer index to string for MongoDB
+            profile_data["posts"][str(idx)] = post_data
             all_posts.append(post_data)
 
         # Sort all posts by the number of likes in descending order
@@ -65,21 +83,43 @@ def scrape_instagram_profile(username: str) -> dict:
 
         # Get the top 3 posts with highest likes
         for idx, post in enumerate(all_posts[:3], start=1):
-            profile_data["top_posts"][idx] = post
+            profile_data["top_posts"][str(idx)] = post  # Convert index to string
 
         return profile_data
     except instaloader.exceptions.ProfileNotExistsException:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        print("Error: Profile not found")
+        return None
     except instaloader.exceptions.ConnectionException as ce:
-        raise HTTPException(status_code=503, detail="Instagram is blocking requests temporarily. Please try again later.")
+        print("Error: Instagram is blocking requests temporarily. Please try again later.")
+        return None
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"An unexpected error occurred: {e}")
+        return None
 
-@app.get("/scrape/{username}")
-async def scrape_profile(username: str):
-    profile_data = scrape_instagram_profile(username)
-    return profile_data
+def save_to_mongodb(profile_data: dict):
+    try:
+        # Establish connection to MongoDB
+        client = MongoClient(mongodb_uri)
+        db = client["instagram_profiles"]
+        collection = db["profiles"]
+
+        # Update the document if it exists, otherwise insert a new one
+        result = collection.update_one(
+            {"username": profile_data["username"]},  # Filter by username
+            {"$set": profile_data},  # Update the document
+            upsert=True  # Create a new document if no document matches the filter
+        )
+
+        if result.upserted_id:
+            print(f"New document inserted with username: {profile_data['username']}")
+        else:
+            print(f"Document updated for username: {profile_data['username']}")
+
+    except Exception as e:
+        print(f"An error occurred while saving to MongoDB: {e}")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    username = input("Enter the Instagram username to scrape: ")
+    profile_data = scrape_instagram_profile(username)
+    if profile_data:
+        save_to_mongodb(profile_data)

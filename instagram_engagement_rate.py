@@ -1,7 +1,4 @@
 import instaloader
-from fastapi import FastAPI, HTTPException
-
-app = FastAPI()
 
 def calculate_engagement_rate(username: str) -> dict:
     try:
@@ -25,28 +22,21 @@ def calculate_engagement_rate(username: str) -> dict:
             post_count += 1
 
         # Calculate average likes and comments
-        average_likes = total_likes / 18
-        average_comments = total_comments / 18
+        average_likes = round((total_likes / post_count), 2) if post_count > 0 else 0
+        average_comments = round(total_comments / post_count, 2) if post_count > 0 else 0
 
         # Calculate engagement rate
-        engagement_rate = round(((average_likes + average_comments) / profile.followers) * 100 if profile.followers > 0 else 0,2)
+        engagement_rate = round(((average_likes + average_comments) / profile.followers) * 100 if profile.followers > 0 else 0, 2)
 
         return {
-            "average_likes": round(average_likes,2),
-            "average_comments":round(average_comments,2),
+            "average_likes": average_likes,
+            "average_comments": average_comments,
             "engagement_rate": engagement_rate
         }
-    
+
     except instaloader.exceptions.ProfileNotExistsException:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        print("Error: Profile not found")
+        return None
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/engagement_rate/{username}")
-async def engagement_rate(username: str):
-    engagement_rate = calculate_engagement_rate(username)
-    return engagement_rate
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        print(f"Error: {str(e)}")
+        return None
