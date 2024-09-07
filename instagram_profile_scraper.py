@@ -49,9 +49,9 @@ def scrape_instagram_profile(username: str) -> dict:
         # Store all posts to find the top posts by likes later
         all_posts = []
 
-        # Iterate over posts with a random delay, limit to 18 posts
+        # Iterate over posts with a random delay, limit to 12 posts
         for idx, post in enumerate(profile.get_posts(), start=1):
-            if idx > 18:  # Limit to 18 posts
+            if idx > 12:  # Limit to 12 posts
                 break
             time.sleep(random.uniform(1, 3))  # random delay between requests
             post_data = {
@@ -100,21 +100,17 @@ def save_to_mongodb(profile_data: dict):
     try:
         # Establish connection to MongoDB
         client = MongoClient(mongodb_uri)
-        db = client["instagram_profiles"]
-        collection = db["profiles"]
+        db = client["test"]
+        collection = db["instagram_profiles"]
 
-        # Update the document if it exists, otherwise insert a new one
-        result = collection.update_one(
-            {"username": profile_data["username"]},  # Filter by username
-            {"$set": profile_data},  # Update the document
-            upsert=True  # Create a new document if no document matches the filter
-        )
+        # Debugging: Check connection
+        print("Connected to MongoDB")
 
-        if result.upserted_id:
-            print(f"New document inserted with username: {profile_data['username']}")
-        else:
-            print(f"Document updated for username: {profile_data['username']}")
+        # Insert the document
+        result = collection.insert_one(profile_data)  # Insert a new document
 
+        print(f"New document inserted with ID: {result.inserted_id}")
+        
     except Exception as e:
         print(f"An error occurred while saving to MongoDB: {e}")
 
