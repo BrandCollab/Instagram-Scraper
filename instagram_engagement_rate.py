@@ -13,9 +13,9 @@ def calculate_engagement_rate(username: str) -> dict:
         total_comments = 0
         post_count = 0
 
-        # Iterate over the latest 18 posts
+        # Iterate over the latest 12 posts
         for post in profile.get_posts():
-            if post_count >= 18:
+            if post_count >= 12:
                 break
             total_likes += post.likes
             total_comments += post.comments
