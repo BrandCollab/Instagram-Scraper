@@ -106,11 +106,18 @@ def save_to_mongodb(profile_data: dict):
         # Debugging: Check connection
         print("Connected to MongoDB")
 
-        # Insert the document
-        result = collection.insert_one(profile_data)  # Insert a new document
+        # Create filter and update data
+        filter_query = {"username": profile_data["username"]}
+        update_data = {"$set": profile_data}
 
-        print(f"New document inserted with ID: {result.inserted_id}")
-        
+        # Update the document if it exists, otherwise insert a new one
+        result = collection.update_one(filter_query, update_data, upsert=True)
+
+        if result.matched_count > 0:
+            print(f"Document with username '{profile_data['username']}' updated.")
+        else:
+            print(f"New document inserted with username '{profile_data['username']}'.")
+
     except Exception as e:
         print(f"An error occurred while saving to MongoDB: {e}")
 
