@@ -1,42 +1,19 @@
 import instaloader
 import requests
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, HTTPException
-import asyncio
+from instagram_engagement_rate import calculate_engagement_rate
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
-app = FastAPI()
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize instaloader
 loader = instaloader.Instaloader()
 
-def calculate_engagement_rate(username: str) -> dict:
-    try:
-        # Load the profile
-        profile = instaloader.Profile.from_username(loader.context, username)
-
-        # Variables to hold total likes and comments for calculating averages
-        total_likes = 0
-        total_comments = 0
-        post_count = 0
-
-        # Iterate over the latest 18 posts
-        for post in profile.get_posts():
-            if post_count >= 18:
-                break
-            total_likes += post.likes
-            total_comments += post.comments
-            post_count += 1
-
-        # Calculate average likes and comments
-        average_likes = total_likes / 18
-        average_comments = total_comments / 18
-
-        # Calculate engagement rate
-        engagement_rate = round(((average_likes + average_comments) / profile.followers) * 100 if profile.followers > 0 else 0, 2)
-
-        return engagement_rate
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Get MongoDB connection details from environment variables
+mongodb_uri = os.getenv("MONGODB_URI")
 
 def get_top_50_instagram_accounts() -> list:
     try:
@@ -64,14 +41,15 @@ def get_top_50_instagram_accounts() -> list:
 
         return accounts
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error fetching Instagram accounts: {e}")
+        return []
 
-async def process_batch(batch):
+def process_batch(batch):
     batch_results = []
     for account in batch:
         try:
             username = account["username"]
-            engagement_rate = calculate_engagement_rate(username)
+            engagement_data = calculate_engagement_rate(username)
 
             # Load the profile
             profile = instaloader.Profile.from_username(loader.context, username)
@@ -88,24 +66,51 @@ async def process_batch(batch):
                 "followers": followers,
                 "following": following,
                 "total_posts": total_posts,
-                "engagement_rate": engagement_rate
+                "engagement_rate": f"{engagement_data['engagement_rate']} %"
             })
         except Exception as e:
+            print(f"Error processing account {username}: {e}")
             continue
     return batch_results
 
-@app.get("/top_50_instagram_accounts")
-async def top_50_instagram_accounts():
+
+def save_to_mongodb(all_results: list):
+    try:
+        # Establish connection to MongoDB
+        client = MongoClient(mongodb_uri)
+        db = client["test"]
+        collection = db["top_50_instagram_accounts"]
+
+        # Debugging: Check connection
+        print("Connected to MongoDB")
+
+        # Insert multiple documents
+        if all_results:
+            result = collection.insert_many(all_results)  # Insert a batch of documents
+            print(f"Inserted {len(result.inserted_ids)} documents into MongoDB")
+        
+    except Exception as e:
+        print(f"An error occurred while saving to MongoDB: {e}")
+
+def main():
     accounts = get_top_50_instagram_accounts()
+    if not accounts:
+        print("No accounts found.")
+        return
+
+    # Process accounts in batches of 5
     batches = [accounts[i:i + 5] for i in range(0, len(accounts), 5)]
+    all_results = []
 
-    results = []
     for batch in batches:
-        batch_results = await process_batch(batch)
-        results.extend(batch_results)
+        batch_results = process_batch(batch)
+        all_results.extend(batch_results)
 
-    return results
+    # Save results to MongoDB
+    save_to_mongodb(all_results)
+
+    # Print the results
+    print(all_results)  # Print all_results
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    main()               
