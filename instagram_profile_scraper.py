@@ -42,7 +42,7 @@ def scrape_instagram_profile(username: str) -> dict:
             "average_likes": engagement_data['average_likes'],
             "average_comments": engagement_data['average_comments'],
             "engagement_rate": f"{engagement_data['engagement_rate']} %",
-            "top_posts": {},
+            "recent_top_posts": {},
             "posts": {},
         }
 
@@ -83,7 +83,7 @@ def scrape_instagram_profile(username: str) -> dict:
 
         # Get the top 3 posts with highest likes
         for idx, post in enumerate(all_posts[:3], start=1):
-            profile_data["top_posts"][str(idx)] = post  # Convert index to string
+            profile_data["recent_top_posts"][str(idx)] = post  # Convert index to string
 
         return profile_data
     except instaloader.exceptions.ProfileNotExistsException:
