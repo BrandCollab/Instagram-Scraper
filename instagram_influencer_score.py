@@ -109,10 +109,8 @@ def calculate_engagement_rate(username: str) -> dict:
             if average_interval > 0:
                 normalized_sd = std_dev_interval / average_interval
                 consistency_score = max(0, 1 - normalized_sd)  # Ensure score is between 0 and 1
-
-        print(normalized_engagement_rate, normalized_avg_likes, normalized_avg_comments, consistency_score)
         
-        influencer_score = ((0.3 * normalized_engagement_rate) + (0.25 * normalized_avg_likes) + (0.2 * normalized_avg_comments) + (0.25 * consistency_score)) * 100
+        influencer_score = ((0.9 * normalized_engagement_rate) + (0.75 * normalized_avg_likes) + (0.6 * normalized_avg_comments) + (0.75 * consistency_score)) * 100
         profile_data["influencer_score"] = round(influencer_score, 2)
 
         return profile_data
